@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard · TrafficSense</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0B0F1A;
+      --surface:  #111827;
+      --surface2: #162032;
+      --border:   #1F2D3D;
+      --accent:   #F59E0B;
+      --accent2:  #3B82F6;
+      --green:    #22C55E;
+      --red:      #EF4444;
+      --purple:   #A855F7;
+      --text:     #F1F5F9;
+      --muted:    #64748B;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Space Grotesk', sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+    }
+    .sidebar-logo {
+      padding: 1.5rem 1.25rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo span { color: var(--text); }
+    .sidebar-section {
+      padding: 1.25rem 1rem 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .sidebar-nav { list-style: none; padding: 0 0.5rem; }
+    .sidebar-nav li a {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 0.15rem;
+    }
+    .sidebar-nav li a:hover { background: var(--surface2); color: var(--text); }
+    .sidebar-nav li a.active { background: rgba(245,158,11,0.1); color: var(--accent); }
+    .sidebar-nav li a .icon { font-size: 1rem; width: 20px; text-align: center; }
+    .sidebar-bottom {
+      margin-top: auto;
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-tag {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    /* ── MAIN ── */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(11,15,26,0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topbar-left h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .topbar-left p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .filter-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.4rem 0.75rem;
+      border-radius: 7px;
+      font-family: var(--sans);
+      font-size: 0.8rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .filter-select:focus { border-color: var(--accent); }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--green);
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.25);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    /* ── CONTENT ── */
+    .content { padding: 1.75rem 2rem 3rem; }
+
+    /* ── KPI STRIP ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .kpi-card.yellow::after { background: var(--accent); }
+    .kpi-card.red::after    { background: var(--red); }
+    .kpi-card.blue::after   { background: var(--accent2); }
+    .kpi-card.green::after  { background: var(--green); }
+    .kpi-card.purple::after { background: var(--purple); }
+    .kpi-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+    }
+    .kpi-value {
+      font-family: var(--mono);
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .kpi-card.yellow .kpi-value { color: var(--accent); }
+    .kpi-card.red    .kpi-value { color: var(--red); }
+    .kpi-card.blue   .kpi-value { color: var(--accent2); }
+    .kpi-card.green  .kpi-value { color: var(--green); }
+    .kpi-card.purple .kpi-value { color: var(--purple); }
+    .kpi-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* ── CHART GRID ── */
+    .chart-row {
+      display: grid;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .row-2 { grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 2fr 1fr; }
+    .row-3b { grid-template-columns: 1fr 2fr; }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem 1.5rem;
+    }
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .chart-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .chart-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+    .chart-tag {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .chart-wrap {
+      position: relative;
+    }
+    .chart-wrap canvas { max-height: 260px; }
+    .chart-wrap.tall canvas { max-height: 320px; }
+    .chart-wrap.short canvas { max-height: 200px; }
+
+    /* ── TABLE ── */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .table-header {
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-header h3 { font-size: 0.9rem; font-weight: 600; }
+    .table-header p  { font-size: 0.72rem; color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    thead th {
+      background: var(--surface2);
+      padding: 0.65rem 1.5rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 0.7rem 1.5rem;
+      color: var(--text);
+    }
+    .badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .badge-high   { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .badge-low    { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .badge-closed { background: rgba(34,197,94,0.1);   color: var(--green); }
+    .badge-active { background: rgba(239,68,68,0.1);   color: var(--red); }
+    .badge-planned   { background: rgba(59,130,246,0.12);  color: var(--accent2); }
+    .badge-unplanned { background: rgba(245,158,11,0.12);  color: var(--accent); }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 2px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .row-3, .row-3b { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 800px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .row-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Traffic<span>Sense</span></div>
+  <div class="sidebar-section">Main</div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">🏠</span> Home</a></li>
+    <li><a href="dashboard.html" class="active"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="map.html"><span class="icon">🗺️</span> Map View</a></li>
+    <li><a href="forecast.html"><span class="icon">⚡</span> Forecast</a></li>
+    <li><a href="insights.html"><span class="icon">💡</span> Insights</a></li>
+  </ul>
+  <div class="sidebar-section">Data</div>
+  <ul class="sidebar-nav">
+    <li><a href="#causes"><span class="icon">📌</span> Event Causes</a></li>
+    <li><a href="#zones"><span class="icon">🏙️</span> Zones</a></li>
+    <li><a href="#timeline"><span class="icon">📅</span> Timeline</a></li>
+    <li><a href="#hotspots"><span class="icon">🔥</span> Hotspots</a></li>
+  </ul>
+  <div class="sidebar-bottom">
+    <div class="sidebar-tag">8,173 events · Nov 23–Apr 24</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Analytics Dashboard</h1>
+      <p>Bengaluru Traffic Events · Nov 2023 – Apr 2024</p>
+    </div>
+    <div class="topbar-right">
+      <select class="filter-select" id="zoneFilter" onchange="applyFilter()">
+        <option value="all">All Zones</option>
+        <option value="Central Zone 1">Central Zone 1</option>
+        <option value="Central Zone 2">Central Zone 2</option>
+        <option value="North Zone 1">North Zone 1</option>
+        <option value="North Zone 2">North Zone 2</option>
+        <option value="South Zone 1">South Zone 1</option>
+        <option value="South Zone 2">South Zone 2</option>
+        <option value="East Zone 1">East Zone 1</option>
+        <option value="East Zone 2">East Zone 2</option>
+        <option value="West Zone 1">West Zone 1</option>
+        <option value="West Zone 2">West Zone 2</option>
+      </select>
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- KPI STRIP -->
+    <div class="kpi-grid">
+      <div class="kpi-card yellow">
+        <div class="kpi-label">Total Events</div>
+        <div class="kpi-value">8,173</div>
+        <div class="kpi-sub">Nov 2023 – Apr 2024</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">High Priority</div>
+        <div class="kpi-value">5,030</div>
+        <div class="kpi-sub">61.5% of all events</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label">Active Now</div>
+        <div class="kpi-value">1,007</div>
+        <div class="kpi-sub">Unresolved incidents</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Closed</div>
+        <div class="kpi-value">7,095</div>
+        <div class="kpi-sub">86.8% resolution rate</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">Road Closures</div>
+        <div class="kpi-value">676</div>
+        <div class="kpi-sub">8.3% require closure</div>
+      </div>
+    </div>
+
+    <!-- ROW 1: Monthly trend + Hourly distribution -->
+    <div class="chart-row row-3" id="timeline">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Events Over Time</div>
+            <div class="chart-sub">Monthly incident volume across Bengaluru</div>
+          </div>
+          <div class="chart-tag">MONTHLY</div>
+        </div>
+        <div class="chart-wrap tall">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Hour of Day</div>
+            <div class="chart-sub">When events peak</div>
+          </div>
+          <div class="chart-tag">24H</div>
+        </div>
+        <div class="chart-wrap tall">
+          <canvas id="hourlyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2: Causes + Priority + Type -->
+    <div class="chart-row row-3b" id="causes">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Planned vs Unplanned</div>
+            <div class="chart-sub">Event type split + Priority breakdown</div>
+          </div>
+          <div class="chart-tag">SPLIT</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:center;">
+          <div class="chart-wrap short"><canvas id="etypeChart"></canvas></div>
+          <div class="chart-wrap short"><canvas id="priorityChart"></canvas></div>
+        </div>
+        <div class="legend" style="margin-top:1rem;">
+          <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Unplanned</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Planned</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>High Priority</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>Low Priority</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Event Causes</div>
+            <div class="chart-sub">Top 10 causes driving congestion</div>
+          </div>
+          <div class="chart-tag">TOP 10</div>
+        </div>
+        <div class="chart-wrap tall">
+          <canvas id="causesChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3: Zones + Day of week -->
+    <div class="chart-row row-2" id="zones">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Events by Zone</div>
+            <div class="chart-sub">All 10 Bengaluru traffic zones</div>
+          </div>
+          <div class="chart-tag">ZONE</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="zoneChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Day of Week Pattern</div>
+            <div class="chart-sub">Which days see most incidents</div>
+          </div>
+          <div class="chart-tag">WEEKLY</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="dowChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 4: Resolution time by cause -->
+    <div class="chart-row" id="hotspots">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Median Resolution Time by Cause (minutes)</div>
+            <div class="chart-sub">How long each event type takes to resolve — key for forecasting deployment duration</div>
+          </div>
+          <div class="chart-tag">RESOLUTION</div>
+        </div>
+        <div class="chart-wrap short">
+          <canvas id="resolutionChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP POLICE STATIONS TABLE -->
+    <div class="table-card">
+      <div class="table-header">
+        <div>
+          <h3>Top Police Stations by Incident Load</h3>
+          <p>Stations with highest event count — indicates deployment pressure zones</p>
+        </div>
+        <div class="chart-tag">TOP 10</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Police Station</th>
+            <th>Total Events</th>
+            <th>Share of Total</th>
+            <th>Load</th>
+          </tr>
+        </thead>
+        <tbody id="psTable"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ── DATA ──
+const DATA = {
+  monthly: {"Nov 2023":972,"Dec 2023":1746,"Jan 2024":1446,"Feb 2024":1340,"Mar 2024":1931,"Apr 2024":622},
+  hourly:  {"0":418,"1":381,"2":387,"3":372,"4":558,"5":661,"6":660,"7":480,"8":327,"9":160,"10":68,"11":68,"12":63,"13":33,"14":13,"15":9,"16":9,"17":34,"18":228,"19":578,"20":681,"21":810,"22":564,"23":495},
+  causes:  {"vehicle_breakdown":4896,"others":638,"pot_holes":537,"construction":480,"water_logging":458,"accident":365,"tree_fall":284,"road_conditions":170,"congestion":136,"public_event":84},
+  zones:   {"Central Zone 2":623,"West Zone 1":433,"North Zone 2":413,"West Zone 2":358,"South Zone 2":354,"North Zone 1":318,"Central Zone 1":269,"East Zone 1":253,"South Zone 1":233,"East Zone 2":190},
+  etype:   {"unplanned":7706,"planned":467},
+  priority:{"High":5030,"Low":3141},
+  dow:     {"Mon":909,"Tue":1245,"Wed":1162,"Thu":1343,"Fri":1245,"Sat":1223,"Sun":930},
+  resolution: {"accident":40,"procession":37,"protest":25,"vehicle_breakdown":41,"congestion":72,"tree_fall":732,"others":482,"water_logging":3688,"construction":2945,"road_conditions":9236,"pot_holes":12990},
+  police:  {"Yelahanka":377,"HAL Old Airport":361,"Sadashivanagar":302,"Byatarayanapura":297,"Halasuru Gate":297,"Yeshwanthpura":280,"Hennuru":276,"Kodigehalli":272,"Banaswadi":245,"K.R. Pura":228}
+};
+
+const C = {
+  yellow: '#F59E0B', blue: '#3B82F6', red: '#EF4444',
+  green: '#22C55E', purple: '#A855F7', muted: '#64748B',
+  border: '#1F2D3D', text: '#F1F5F9', bg: '#111827'
+};
+
+Chart.defaults.color = C.muted;
+Chart.defaults.borderColor = C.border;
+Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+
+function makeGrad(ctx, color, alpha1=0.3, alpha2=0) {
+  const g = ctx.createLinearGradient(0,0,0,300);
+  g.addColorStop(0, color.replace(')', `,${alpha1})`).replace('rgb', 'rgba'));
+  g.addColorStop(1, color.replace(')', `,${alpha2})`).replace('rgb', 'rgba'));
+  return g;
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ── MONTHLY CHART ──
+(function() {
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  const labels = Object.keys(DATA.monthly);
+  const values = Object.values(DATA.monthly);
+  const grad = ctx.createLinearGradient(0,0,0,280);
+  grad.addColorStop(0, 'rgba(245,158,11,0.25)');
+  grad.addColorStop(1, 'rgba(245,158,11,0)');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: C.yellow,
+        borderWidth: 2.5,
+        backgroundColor: grad,
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: C.yellow,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+        titleColor: C.text, bodyColor: C.muted,
+        callbacks: { label: ctx => ` ${ctx.parsed.y.toLocaleString()} events` }
+      }},
+      scales: {
+        x: { grid: { color: C.border }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: C.border }, ticks: { font: { size: 11 }, callback: v => v.toLocaleString() } }
+      }
+    }
+  });
+})();
+
+// ── HOURLY CHART ──
+(function() {
+  const ctx = document.getElementById('hourlyChart').getContext('2d');
+  const hours = Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}:00`);
+  const values = hours.map((_,i) => DATA.hourly[String(i)] || 0);
+  const colors = values.map(v => v > 500 ? C.red : v > 300 ? C.yellow : C.muted);
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: hours,
+      datasets: [{ data: values, backgroundColor: colors, borderRadius: 3, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.parsed.y} events` }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } },
+        y: { grid: { color: C.border }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+})();
+
+// ── EVENT TYPE DONUT ──
+(function() {
+  const ctx = document.getElementById('etypeChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Unplanned','Planned'],
+      datasets: [{ data: [7706, 467], backgroundColor: [C.yellow, C.blue], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.toLocaleString()} (${((ctx.parsed/8173)*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+})();
+
+// ── PRIORITY DONUT ──
+(function() {
+  const ctx = document.getElementById('priorityChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['High','Low'],
+      datasets: [{ data: [5030, 3141], backgroundColor: [C.red, C.green], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.toLocaleString()} (${((ctx.parsed/8173)*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+})();
+
+// ── CAUSES CHART ──
+(function() {
+  const ctx = document.getElementById('causesChart').getContext('2d');
+  const labels = Object.keys(DATA.causes).map(l => l.replace(/_/g,' '));
+  const values = Object.values(DATA.causes);
+  const palette = [C.red, C.yellow, C.blue, C.purple, C.green,
+    '#F97316','#06B6D4','#EC4899','#84CC16','#8B5CF6'];
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: palette, borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.parsed.x.toLocaleString()} events` }
+      }},
+      scales: {
+        x: { grid: { color: C.border }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+})();
+
+// ── ZONE CHART ──
+(function() {
+  const ctx = document.getElementById('zoneChart').getContext('2d');
+  const labels = Object.keys(DATA.zones);
+  const values = Object.values(DATA.zones);
+  const grad = ctx.createLinearGradient(0,0,600,0);
+  grad.addColorStop(0, C.blue);
+  grad.addColorStop(1, C.purple);
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: grad, borderRadius: 5, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.parsed.x.toLocaleString()} events` }
+      }},
+      scales: {
+        x: { grid: { color: C.border }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+})();
+
+// ── DOW CHART ──
+(function() {
+  const ctx = document.getElementById('dowChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0, 'rgba(168,85,247,0.6)');
+  grad.addColorStop(1, 'rgba(168,85,247,0.05)');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(DATA.dow),
+      datasets: [{
+        data: Object.values(DATA.dow),
+        backgroundColor: grad,
+        borderRadius: 5, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.parsed.y.toLocaleString()} events` }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: C.border }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+})();
+
+// ── RESOLUTION CHART ──
+(function() {
+  const ctx = document.getElementById('resolutionChart').getContext('2d');
+  const sorted = Object.entries(DATA.resolution).sort((a,b) => a[1]-b[1]);
+  const labels = sorted.map(([k]) => k.replace(/_/g,' '));
+  const values = sorted.map(([,v]) => v);
+  const colors = values.map(v => v > 5000 ? C.red : v > 1000 ? C.yellow : C.green);
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#0B0F1A', borderColor: C.border, borderWidth: 1,
+        callbacks: {
+          label: ctx => {
+            const v = ctx.parsed.y;
+            return v >= 60 ? ` ${(v/60).toFixed(1)} hrs` : ` ${v} min`;
+          }
+        }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: {
+          grid: { color: C.border },
+          ticks: { font: { size: 10 }, callback: v => v >= 60 ? `${(v/60).toFixed(0)}h` : `${v}m` }
+        }
+      }
+    }
+  });
+})();
+
+// ── POLICE TABLE ──
+(function() {
+  const total = 8173;
+  const tbody = document.getElementById('psTable');
+  Object.entries(DATA.police).forEach(([name, count], i) => {
+    const pct = ((count/total)*100).toFixed(1);
+    const barW = Math.round((count/377)*100);
+    tbody.innerHTML += `
+      <tr>
+        <td style="color:var(--muted);font-family:var(--mono);font-size:0.75rem;">${String(i+1).padStart(2,'0')}</td>
+        <td style="font-weight:500;">${name}</td>
+        <td style="font-family:var(--mono);color:var(--accent);">${count.toLocaleString()}</td>
+        <td style="font-family:var(--mono);color:var(--muted);">${pct}%</td>
+        <td>
+          <div style="background:var(--surface2);border-radius:4px;height:6px;width:120px;">
+            <div style="background:${count>300?'var(--red)':count>250?'var(--yellow)':'var(--blue)'};
+              width:${barW}%;height:100%;border-radius:4px;background:var(--accent2);"></div>
+          </div>
+        </td>
+      </tr>`;
+  });
+})();
+</script>
+</body>
+</html>

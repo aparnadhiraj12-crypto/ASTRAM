@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrafficSense · Bengaluru Congestion Intelligence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0B0F1A;
+      --surface:   #111827;
+      --border:    #1F2D3D;
+      --accent:    #F59E0B;
+      --accent2:   #3B82F6;
+      --danger:    #EF4444;
+      --text:      #F1F5F9;
+      --muted:     #64748B;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Space Grotesk', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2.5rem;
+      background: rgba(11,15,26,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .nav-logo span { color: var(--text); }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent);
+      color: #000;
+      padding: 0.45rem 1.1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8rem 2.5rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* grid overlay */
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    /* radial glow */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -10%; left: -10%;
+      width: 60%; height: 70%;
+      background: radial-gradient(ellipse, rgba(245,158,11,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 24px; height: 1px;
+      background: var(--accent);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 700;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      max-width: 780px;
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      position: relative;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      position: relative;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      padding: 0.8rem 1.8rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s, opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      padding: 0.8rem 1.8rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s, background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-secondary:hover { border-color: var(--muted); background: var(--surface); }
+
+    /* ── LIVE TICKER ── */
+    .ticker-wrap {
+      position: relative;
+      margin-top: 4rem;
+      width: 100%;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 0;
+      overflow: hidden;
+    }
+    .ticker-label {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: var(--accent);
+      color: #000;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 0 1rem;
+      display: flex;
+      align-items: center;
+      z-index: 2;
+      white-space: nowrap;
+    }
+    .ticker-track {
+      display: flex;
+      gap: 3rem;
+      animation: ticker 28s linear infinite;
+      padding-left: 140px;
+      white-space: nowrap;
+    }
+    .ticker-track span {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .ticker-track span b { color: var(--accent); font-weight: 600; }
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ── STATS STRIP ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-card {
+      background: var(--surface);
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .stat-num {
+      font-family: var(--mono);
+      font-size: 2.6rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-num .accent { color: var(--accent); }
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .stat-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    /* ── PROBLEM SECTION ── */
+    .section {
+      padding: 6rem 2.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .section h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      line-height: 1.15;
+    }
+    .section-desc {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 600px;
+      line-height: 1.75;
+      margin-bottom: 3rem;
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    .problem-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .problem-card:hover { border-color: var(--accent); }
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .problem-card:hover::before { opacity: 1; }
+    .problem-icon {
+      font-size: 1.75rem;
+      margin-bottom: 1rem;
+    }
+    .problem-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .problem-card p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── SOLUTION SECTION ── */
+    .solution-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .solution-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 6rem 2.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+    .solution-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .step {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 6px;
+      padding: 0.3rem 0.55rem;
+      white-space: nowrap;
+      margin-top: 0.15rem;
+      flex-shrink: 0;
+    }
+    .step-text h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    .step-text p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── ML MODEL PREVIEW ── */
+    .model-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+    .model-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #EF4444; }
+    .dot-y { background: #F59E0B; }
+    .dot-g { background: #22C55E; }
+    .model-panel-title {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-left: 0.5rem;
+    }
+    .model-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid rgba(31,45,61,0.6);
+    }
+    .model-row:last-child { border-bottom: none; }
+    .model-key { color: var(--muted); font-size: 0.75rem; }
+    .model-val { color: var(--accent); font-weight: 600; }
+    .model-val.blue { color: var(--accent2); }
+    .model-val.green { color: #22C55E; }
+    .model-val.red { color: var(--danger); }
+    .model-output {
+      margin-top: 1.25rem;
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .model-output-label {
+      font-size: 0.65rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    .model-output-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.25rem 0;
+    }
+    .model-output-item span:last-child { color: var(--text); font-weight: 500; }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, border-color 0.2s;
+      display: block;
+    }
+    .feature-card:hover { transform: translateY(-4px); border-color: var(--accent2); }
+    .feature-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: var(--accent); }
+    .badge-blue   { background: rgba(59,130,246,0.15); color: var(--accent2); }
+    .badge-green  { background: rgba(34,197,94,0.15);  color: #22C55E; }
+    .badge-red    { background: rgba(239,68,68,0.15);  color: var(--danger); }
+    .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .feature-card p  { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-brand {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+    .footer-brand span { color: var(--muted); }
+    .footer-badges {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .footer-badge {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 0.25rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .problem-grid { grid-template-columns: 1fr; }
+      .solution-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      nav .nav-links { display: none; }
+    }
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero { padding: 7rem 1.25rem 3rem; }
+      .section { padding: 4rem 1.25rem; }
+      footer { flex-direction: column; gap: 1rem; text-align: center; }
+    }
+
+    /* ── COUNTER ANIMATION ── */
+    .count-up { display: inline-block; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Traffic<span>Sense</span></div>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#features">Features</a></li>
+  </ul>
+  <a href="dashboard.html" class="nav-cta">Open Dashboard →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Bengaluru Traffic Intelligence</div>
+  <h1>Predict congestion.<br/><em>Before it happens.</em></h1>
+  <p class="hero-sub">
+    ML-powered forecasting for event-driven traffic breakdowns across Bengaluru.
+    Recommends manpower, barricading, and diversion plans — automatically.
+  </p>
+  <div class="hero-actions">
+    <a href="dashboard.html" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      View Dashboard
+    </a>
+    <a href="forecast.html" class="btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Run Prediction
+    </a>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap" style="margin-top:4rem; width:calc(100% + 5rem); margin-left:-2.5rem;">
+    <div class="ticker-label">LIVE FEED</div>
+    <div class="ticker-track" id="ticker">
+      <span>🔴 <b>HIGH</b> · Vehicle Breakdown · Mysore Road · 14 min ago</span>
+      <span>🟡 <b>MED</b> · Public Event · MG Road · Road closure active</span>
+      <span>🔴 <b>HIGH</b> · Accident · Bellary Road · Requires diversion</span>
+      <span>🟢 <b>LOW</b> · Pothole · Tumkur Road · Resolved in 22 min</span>
+      <span>🔴 <b>HIGH</b> · Construction · Outer Ring Road · Barricading deployed</span>
+      <span>🟡 <b>MED</b> · Water Logging · Hosur Road · Under monitoring</span>
+      <span>🔴 <b>HIGH</b> · Vehicle Breakdown · Mysore Road · 14 min ago</span>
+      <span>🟡 <b>MED</b> · Public Event · MG Road · Road closure active</span>
+      <span>🔴 <b>HIGH</b> · Accident · Bellary Road · Requires diversion</span>
+      <span>🟢 <b>LOW</b> · Pothole · Tumkur Road · Resolved in 22 min</span>
+      <span>🔴 <b>HIGH</b> · Construction · Outer Ring Road · Barricading deployed</span>
+      <span>🟡 <b>MED</b> · Water Logging · Hosur Road · Under monitoring</span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats" id="stats">
+  <div class="stat-card">
+    <div class="stat-num"><span class="count-up accent" data-target="8173">0</span></div>
+    <div class="stat-label">Traffic Events Analyzed</div>
+    <div class="stat-sub">From real Bengaluru incident data</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num"><span class="count-up" data-target="61" style="color:var(--danger)">0</span><span style="color:var(--danger)">%</span></div>
+    <div class="stat-label">High Priority Incidents</div>
+    <div class="stat-sub">Requiring immediate response</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num"><span class="count-up" data-target="10" style="color:var(--accent2)">0</span></div>
+    <div class="stat-label">Traffic Zones Covered</div>
+    <div class="stat-sub">Across all Bengaluru divisions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num"><span class="count-up" data-target="54" style="color:#22C55E">0</span></div>
+    <div class="stat-label">Police Stations Mapped</div>
+    <div class="stat-sub">Jurisdiction-level deployment data</div>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<section class="section" id="problem">
+  <div class="section-label">The Challenge</div>
+  <h2>Why Bengaluru traffic<br/>breaks down at events</h2>
+  <p class="section-desc">
+    Political rallies, festivals, sports events, and sudden vehicle breakdowns create localized
+    traffic crises. Today, response is purely experience-driven with no data backing.
+  </p>
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="problem-icon">📊</div>
+      <h3>No Impact Quantification</h3>
+      <p>Event impact on surrounding roads is not measured in advance. Police deploy based on gut feel, not data.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🚓</div>
+      <h3>Experience-Driven Deployment</h3>
+      <p>Manpower allocation relies on senior officer memory. No optimization, no load balancing across zones.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🔁</div>
+      <h3>Zero Post-Event Learning</h3>
+      <p>After each event, no structured feedback loop exists. The same mistakes repeat across different zones.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTION -->
+<section class="solution-section" id="solution">
+  <div class="solution-inner">
+    <div>
+      <div class="section-label">Our Approach</div>
+      <h2 style="font-size:clamp(1.6rem,3vw,2.4rem); font-weight:700; letter-spacing:-0.02em; margin-bottom:1rem;">From historical data<br/>to real-time action</h2>
+      <p style="color:var(--muted); font-size:0.95rem; line-height:1.75; margin-bottom:2.5rem;">
+        We trained ML models on 8,000+ Bengaluru traffic events to predict severity,
+        road closure need, and resolution time — then convert predictions into actionable deployment plans.
+      </p>
+      <div class="solution-steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-text">
+            <h4>Ingest Event Data</h4>
+            <p>Event type, location, cause, vehicle type, corridor, and time fed as inputs.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-text">
+            <h4>ML Model Predicts</h4>
+            <p>XGBoost classifiers predict priority level and road closure requirement. Regressor estimates resolution time.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-text">
+            <h4>Deployment Plan Generated</h4>
+            <p>System recommends manpower count, barricade positions, and optimal diversion routes.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-text">
+            <h4>Post-Event Learning</h4>
+            <p>Actual vs predicted resolution tracked. Model improves with each closed incident.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ML Panel Preview -->
+    <div class="model-panel">
+      <div class="model-panel-header">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <span class="model-panel-title">trafficsense_predict.py</span>
+      </div>
+      <div class="model-row">
+        <span class="model-key">event_type</span>
+        <span class="model-val">"unplanned"</span>
+      </div>
+      <div class="model-row">
+        <span class="model-key">event_cause</span>
+        <span class="model-val">"public_event"</span>
+      </div>
+      <div class="model-row">
+        <span class="model-key">corridor</span>
+        <span class="model-val blue">"Mysore Road"</span>
+      </div>
+      <div class="model-row">
+        <span class="model-key">hour</span>
+        <span class="model-val blue">19</span>
+      </div>
+      <div class="model-row">
+        <span class="model-key">day_of_week</span>
+        <span class="model-val blue">5 (Sat)</span>
+      </div>
+      <div class="model-row">
+        <span class="model-key">veh_type</span>
+        <span class="model-val">"heavy_vehicle"</span>
+      </div>
+      <div class="model-output">
+        <div class="model-output-label">→ Model Output</div>
+        <div class="model-output-item"><span>priority</span><span style="color:var(--danger)">HIGH ⚠</span></div>
+        <div class="model-output-item"><span>road_closure</span><span style="color:var(--danger)">Required</span></div>
+        <div class="model-output-item"><span>resolution_time</span><span style="color:var(--accent)">~87 min</span></div>
+        <div class="model-output-item"><span>manpower_rec</span><span style="color:#22C55E">12 officers</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-label">Platform</div>
+  <h2 style="margin-bottom:0.75rem;">Everything in one place</h2>
+  <p class="section-desc">Four tools built on top of real Bengaluru incident data.</p>
+  <div class="features-grid">
+    <a href="dashboard.html" class="feature-card">
+      <div class="feature-badge badge-yellow">ANALYTICS</div>
+      <h3>Live Dashboard</h3>
+      <p>Event trends, zone breakdowns, cause distribution, and priority heatmaps — all in real time.</p>
+    </a>
+    <a href="map.html" class="feature-card">
+      <div class="feature-badge badge-blue">MAP VIEW</div>
+      <h3>Incident Map</h3>
+      <p>Every event plotted on Bengaluru map. Filter by zone, cause, or priority. Click for full details.</p>
+    </a>
+    <a href="forecast.html" class="feature-card">
+      <div class="feature-badge badge-green">ML MODEL</div>
+      <h3>Congestion Forecast</h3>
+      <p>Input event parameters and get instant predictions: severity, closure need, resolution time, manpower.</p>
+    </a>
+    <a href="insights.html" class="feature-card">
+      <div class="feature-badge badge-red">INSIGHTS</div>
+      <h3>Post-Event Learning</h3>
+      <p>Junction-level hotspots, police station workloads, and resolution time patterns for continuous improvement.</p>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">Traffic<span>Sense</span> · Bengaluru</div>
+  <div class="footer-badges">
+    <div class="footer-badge">Flipkart Hackathon 2025</div>
+    <div class="footer-badge">8,173 Events</div>
+    <div class="footer-badge">XGBoost · RandomForest</div>
+  </div>
+</footer>
+
+<script>
+  // Counter animation
+  const counters = document.querySelectorAll('.count-up');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = +el.dataset.target;
+        const duration = 1400;
+        const step = target / (duration / 16);
+        let current = 0;
+        const timer = setInterval(() => {
+          current = Math.min(current + step, target);
+          el.textContent = Math.floor(current).toLocaleString();
+          if (current >= target) clearInterval(timer);
+        }, 16);
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.3 });
+  counters.forEach(c => observer.observe(c));
+</script>
+</body>
+</html>

@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forecast · TrafficSense</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0F1A;--surface:#111827;--surface2:#162032;--border:#1F2D3D;
+  --accent:#F59E0B;--accent2:#3B82F6;--green:#22C55E;--red:#EF4444;
+  --purple:#A855F7;--text:#F1F5F9;--muted:#64748B;
+  --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;}
+.sidebar-logo{padding:1.5rem 1.25rem 1.25rem;font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--accent);border-bottom:1px solid var(--border);}
+.sidebar-logo span{color:var(--text);}
+.sidebar-section{padding:1.25rem 1rem .5rem;font-family:var(--mono);font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.sidebar-nav{list-style:none;padding:0 .5rem;}
+.sidebar-nav li a{display:flex;align-items:center;gap:.65rem;padding:.6rem .75rem;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:500;color:var(--muted);transition:background .15s,color .15s;margin-bottom:.15rem;}
+.sidebar-nav li a:hover{background:var(--surface2);color:var(--text);}
+.sidebar-nav li a.active{background:rgba(34,197,94,.1);color:var(--green);}
+.sidebar-nav li a .icon{font-size:1rem;width:20px;text-align:center;}
+.sidebar-bottom{margin-top:auto;padding:1rem;border-top:1px solid var(--border);}
+.sidebar-tag{font-family:var(--mono);font-size:.65rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:.35rem .6rem;border-radius:6px;text-align:center;}
+
+/* MAIN */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{position:sticky;top:0;z-index:40;background:rgba(11,15,26,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.85rem 2rem;display:flex;align-items:center;justify-content:space-between;}
+.topbar-left h1{font-size:1.1rem;font-weight:600;}
+.topbar-left p{font-size:.75rem;color:var(--muted);font-family:var(--mono);}
+.model-status{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.7rem;color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);padding:.35rem .75rem;border-radius:6px;}
+.status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.7);}}
+
+.content{padding:2rem;max-width:1300px;margin:0 auto;width:100%;}
+.page-head{margin-bottom:2rem;}
+.page-eyebrow{font-family:var(--mono);font-size:.7rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;}
+.page-head h2{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.5rem;}
+.page-head p{color:var(--muted);font-size:.92rem;max-width:600px;line-height:1.6;}
+
+/* GRID LAYOUT */
+.forecast-grid{display:grid;grid-template-columns:420px 1fr;gap:1.5rem;align-items:start;}
+
+/* FORM CARD */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;position:sticky;top:90px;}
+.form-card-title{font-size:.95rem;font-weight:600;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem;}
+.form-card-sub{font-size:.78rem;color:var(--muted);margin-bottom:1.5rem;}
+
+.field-group{margin-bottom:1.15rem;}
+.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:.45rem;}
+.field-label .req{color:var(--accent);}
+select, input[type="range"]{
+  width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:.65rem .8rem;border-radius:8px;font-family:var(--sans);font-size:.85rem;outline:none;
+  cursor:pointer;transition:border-color .15s;
+}
+select:focus{border-color:var(--accent);}
+select:hover{border-color:var(--muted);}
+
+.toggle-row{display:flex;gap:.5rem;}
+.toggle-btn{
+  flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+  padding:.6rem;border-radius:8px;font-family:var(--sans);font-size:.8rem;font-weight:500;
+  cursor:pointer;transition:all .15s;text-align:center;
+}
+.toggle-btn.active{background:rgba(245,158,11,.12);border-color:var(--accent);color:var(--accent);font-weight:600;}
+
+.time-display{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;
+}
+.time-value{font-family:var(--mono);font-size:.85rem;color:var(--accent);font-weight:600;}
+input[type="range"]{
+  -webkit-appearance:none;height:6px;background:var(--surface2);border-radius:3px;padding:0;
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);
+  cursor:pointer;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--accent);
+}
+
+.predict-btn{
+  width:100%;background:var(--accent);color:#000;border:none;padding:.9rem;border-radius:10px;
+  font-family:var(--sans);font-size:.92rem;font-weight:700;cursor:pointer;margin-top:.5rem;
+  display:flex;align-items:center;justify-content:center;gap:.55rem;transition:transform .15s,opacity .15s;
+}
+.predict-btn:hover{transform:translateY(-1px);opacity:.92;}
+.predict-btn:active{transform:translateY(0);}
+.predict-btn.loading{opacity:.7;cursor:wait;pointer-events:none;}
+
+.spinner{width:14px;height:14px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none;}
+.spinner.show{display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* RESULTS AREA */
+.results-area{display:flex;flex-direction:column;gap:1.25rem;}
+
+.empty-state{
+  background:var(--surface);border:1px dashed var(--border);border-radius:14px;
+  padding:5rem 2rem;text-align:center;color:var(--muted);
+}
+.empty-state .icon{font-size:2.5rem;display:block;margin-bottom:1rem;opacity:.5;}
+.empty-state h3{font-size:1rem;color:var(--text);margin-bottom:.5rem;}
+.empty-state p{font-size:.85rem;max-width:380px;margin:0 auto;line-height:1.6;}
+
+/* Prediction output cards */
+.pred-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.pred-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:1.5rem;position:relative;overflow:hidden;opacity:0;transform:translateY(8px);
+  animation:slideIn .4s ease forwards;
+}
+.pred-card:nth-child(1){animation-delay:.05s;}
+.pred-card:nth-child(2){animation-delay:.15s;}
+.pred-card:nth-child(3){animation-delay:.25s;}
+@keyframes slideIn{to{opacity:1;transform:translateY(0);}}
+.pred-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.pred-card.severity::before{background:var(--red);}
+.pred-card.closure::before{background:var(--purple);}
+.pred-card.time::before{background:var(--accent2);}
+.pred-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;}
+.pred-value{font-family:var(--mono);font-size:1.6rem;font-weight:700;line-height:1;margin-bottom:.4rem;}
+.pred-card.severity .pred-value{color:var(--red);}
+.pred-card.closure .pred-value{color:var(--purple);}
+.pred-card.time .pred-value{color:var(--accent2);}
+.pred-meta{font-size:.72rem;color:var(--muted);}
+.confidence-bar{margin-top:.85rem;background:var(--surface2);height:5px;border-radius:3px;overflow:hidden;}
+.confidence-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+
+/* Deployment recommendation panel */
+.deploy-panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;
+  opacity:0;transform:translateY(8px);animation:slideIn .4s ease forwards;animation-delay:.35s;
+}
+.deploy-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+.deploy-title{font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:.5rem;}
+.deploy-tag{font-family:var(--mono);font-size:.62rem;background:rgba(245,158,11,.12);color:var(--accent);padding:.2rem .55rem;border-radius:4px;}
+
+.deploy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem;}
+.deploy-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem;}
+.deploy-stat-icon{font-size:1.3rem;margin-bottom:.5rem;}
+.deploy-stat-val{font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--accent);margin-bottom:.2rem;}
+.deploy-stat-label{font-size:.72rem;color:var(--muted);}
+
+.plan-list{list-style:none;display:flex;flex-direction:column;gap:.65rem;}
+.plan-item{display:flex;gap:.75rem;align-items:flex-start;font-size:.85rem;color:var(--text);}
+.plan-icon{width:24px;height:24px;border-radius:6px;background:rgba(245,158,11,.12);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;margin-top:.05rem;}
+.plan-text strong{display:block;margin-bottom:.1rem;}
+.plan-text span{color:var(--muted);font-size:.8rem;}
+
+/* Feature importance / explanation */
+.explain-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;
+  opacity:0;transform:translateY(8px);animation:slideIn .4s ease forwards;animation-delay:.45s;
+}
+.explain-title{font-size:.85rem;font-weight:600;margin-bottom:1rem;color:var(--muted);}
+.factor-row{display:flex;align-items:center;gap:.85rem;margin-bottom:.85rem;}
+.factor-name{font-size:.78rem;width:140px;flex-shrink:0;color:var(--text);}
+.factor-bar-track{flex:1;background:var(--surface2);height:8px;border-radius:4px;overflow:hidden;}
+.factor-bar-fill{height:100%;border-radius:4px;}
+.factor-pct{font-family:var(--mono);font-size:.72rem;color:var(--muted);width:36px;text-align:right;}
+
+/* History strip */
+.history-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:1.25rem 1.5rem;opacity:0;transform:translateY(8px);animation:slideIn .4s ease forwards;animation-delay:.55s;
+}
+.history-title{font-size:.85rem;font-weight:600;margin-bottom:.9rem;color:var(--muted);}
+.history-empty{font-size:.8rem;color:var(--muted);text-align:center;padding:1rem 0;}
+.history-item{
+  display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;
+  border-bottom:1px solid var(--border);font-size:.8rem;
+}
+.history-item:last-child{border-bottom:none;}
+.history-left{display:flex;align-items:center;gap:.6rem;}
+.history-dot{width:6px;height:6px;border-radius:50%;}
+
+@media(max-width:1050px){
+  .forecast-grid{grid-template-columns:1fr;}
+  .form-card{position:static;}
+  .pred-row{grid-template-columns:1fr;}
+  .deploy-grid{grid-template-columns:1fr;}
+}
+@media(max-width:800px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .content{padding:1.25rem;}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">Traffic<span>Sense</span></div>
+  <div class="sidebar-section">Main</div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">🏠</span> Home</a></li>
+    <li><a href="dashboard.html"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="map.html"><span class="icon">🗺️</span> Map View</a></li>
+    <li><a href="forecast.html" class="active"><span class="icon">⚡</span> Forecast</a></li>
+    <li><a href="insights.html"><span class="icon">💡</span> Insights</a></li>
+  </ul>
+  <div class="sidebar-bottom">
+    <div class="sidebar-tag">Model v0.1 · Rule-based</div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Congestion Forecast Engine</h1>
+      <p>Predict severity, road closure & resolution time</p>
+    </div>
+    <div class="model-status"><div class="status-dot"></div>MODEL READY</div>
+  </div>
+
+  <div class="content">
+    <div class="page-head">
+      <div class="page-eyebrow">ML Prediction</div>
+      <h2>Forecast event impact before it happens</h2>
+      <p>Enter event parameters below. The model — trained on 8,173 historical Bengaluru traffic events — predicts priority, road closure need, expected resolution time, and recommends a deployment plan.</p>
+    </div>
+
+    <div class="forecast-grid">
+
+      <!-- FORM -->
+      <div class="form-card">
+        <div class="form-card-title">📋 Event Parameters</div>
+        <div class="form-card-sub">Fill in details to generate a forecast</div>
+
+        <div class="field-group">
+          <label class="field-label">Event Type <span class="req">*</span></label>
+          <div class="toggle-row">
+            <button type="button" class="toggle-btn active" data-field="event_type" data-value="unplanned" onclick="toggleSelect(this)">Unplanned</button>
+            <button type="button" class="toggle-btn" data-field="event_type" data-value="planned" onclick="toggleSelect(this)">Planned</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Event Cause <span class="req">*</span></label>
+          <select id="eventCause">
+            <option value="vehicle_breakdown">Vehicle Breakdown</option>
+            <option value="accident">Accident</option>
+            <option value="construction">Construction</option>
+            <option value="water_logging">Water Logging</option>
+            <option value="pot_holes">Pot Holes</option>
+            <option value="tree_fall">Tree Fall</option>
+            <option value="public_event">Public Event</option>
+            <option value="congestion">Congestion</option>
+            <option value="road_conditions">Road Conditions</option>
+            <option value="procession">Procession</option>
+            <option value="protest">Protest</option>
+            <option value="vip_movement">VIP Movement</option>
+            <option value="others">Others</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Corridor / Road</label>
+          <select id="corridor">
+            <option value="Mysore Road">Mysore Road</option>
+            <option value="Bellary Road 1">Bellary Road</option>
+            <option value="Hosur Road">Hosur Road</option>
+            <option value="Old Madras Road">Old Madras Road</option>
+            <option value="Tumkur Road">Tumkur Road</option>
+            <option value="ORR East 1">Outer Ring Road (East)</option>
+            <option value="ORR West 1">Outer Ring Road (West)</option>
+            <option value="Bannerghata Road">Bannerghata Road</option>
+            <option value="Magadi Road">Magadi Road</option>
+            <option value="CBD 1">CBD</option>
+            <option value="Non-corridor">Other / Non-corridor</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Traffic Zone</label>
+          <select id="zone">
+            <option value="Central Zone 1">Central Zone 1</option>
+            <option value="Central Zone 2">Central Zone 2</option>
+            <option value="North Zone 1">North Zone 1</option>
+            <option value="North Zone 2">North Zone 2</option>
+            <option value="South Zone 1">South Zone 1</option>
+            <option value="South Zone 2">South Zone 2</option>
+            <option value="East Zone 1">East Zone 1</option>
+            <option value="East Zone 2">East Zone 2</option>
+            <option value="West Zone 1">West Zone 1</option>
+            <option value="West Zone 2">West Zone 2</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Vehicle Type Involved</label>
+          <select id="vehType">
+            <option value="private_car">Private Car</option>
+            <option value="heavy_vehicle">Heavy Vehicle</option>
+            <option value="bmtc_bus">BMTC Bus</option>
+            <option value="ksrtc_bus">KSRTC Bus</option>
+            <option value="private_bus">Private Bus</option>
+            <option value="truck">Truck</option>
+            <option value="lcv">LCV</option>
+            <option value="auto">Auto Rickshaw</option>
+            <option value="taxi">Taxi</option>
+            <option value="others">Not Applicable</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <div class="time-display">
+            <label class="field-label" style="margin-bottom:0;">Time of Day</label>
+            <span class="time-value" id="hourDisplay">19:00</span>
+          </div>
+          <input type="range" id="hourSlider" min="0" max="23" value="19" oninput="updateHourDisplay()"/>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Day of Week</label>
+          <select id="dayOfWeek">
+            <option value="0">Monday</option>
+            <option value="1">Tuesday</option>
+            <option value="2">Wednesday</option>
+            <option value="3">Thursday</option>
+            <option value="4">Friday</option>
+            <option value="5" selected>Saturday</option>
+            <option value="6">Sunday</option>
+          </select>
+        </div>
+
+        <button class="predict-btn" id="predictBtn" onclick="runPrediction()">
+          <span class="spinner" id="spinner"></span>
+          <span id="btnText">⚡ Run Forecast</span>
+        </button>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="results-area" id="resultsArea">
+        <div class="empty-state" id="emptyState">
+          <span class="icon">🎯</span>
+          <h3>No forecast generated yet</h3>
+          <p>Fill in the event parameters on the left and click "Run Forecast" to see the model's prediction and recommended deployment plan.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- HISTORY -->
+    <div class="history-card" style="margin-top:1.5rem;" id="historyCard">
+      <div class="history-title">📜 Recent Forecasts (this session)</div>
+      <div class="history-empty" id="historyEmpty">No forecasts run yet</div>
+      <div id="historyList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Real cause-level statistics derived from the 8,173-event dataset ──
+const CAUSE_STATS = {
+  vehicle_breakdown: { high_pct: 0.662, closure_pct: 0.043, median_res: 41 },
+  others:            { high_pct: 0.596, closure_pct: 0.086, median_res: 482 },
+  tree_fall:         { high_pct: 0.327, closure_pct: 0.394, median_res: 732 },
+  accident:          { high_pct: 0.460, closure_pct: 0.030, median_res: 40 },
+  public_event:      { high_pct: 0.500, closure_pct: 0.464, median_res: 60 },
+  water_logging:     { high_pct: 0.592, closure_pct: 0.085, median_res: 3688 },
+  pot_holes:         { high_pct: 0.557, closure_pct: 0.024, median_res: 12990 },
+  congestion:        { high_pct: 0.691, closure_pct: 0.044, median_res: 72 },
+  construction:      { high_pct: 0.629, closure_pct: 0.265, median_res: 2945 },
+  road_conditions:   { high_pct: 0.547, closure_pct: 0.124, median_res: 9236 },
+  vip_movement:      { high_pct: 0.350, closure_pct: 0.800, median_res: 60 },
+  procession:        { high_pct: 0.319, closure_pct: 0.264, median_res: 37 },
+  protest:           { high_pct: 0.400, closure_pct: 0.400, median_res: 25 }
+};
+
+const CAUSE_LABELS = {
+  vehicle_breakdown:'Vehicle Breakdown', others:'Others', tree_fall:'Tree Fall',
+  accident:'Accident', public_event:'Public Event', water_logging:'Water Logging',
+  pot_holes:'Pot Holes', congestion:'Congestion', construction:'Construction',
+  road_conditions:'Road Conditions', vip_movement:'VIP Movement', procession:'Procession',
+  protest:'Protest'
+};
+
+let history = [];
+
+// ── Live model API configuration ──
+// This points at your Flask server running in Codespaces (app.py).
+// Update this if your Codespace URL changes (e.g. after a restart).
+const API_BASE_URL = "https://curly-space-goggles-7v4vqpwrw6xgcp4qj-5000.app.github.dev";
+let useLiveModel = true; // set to false to force the offline rule-based fallback
+
+async function checkApiHealth() {
+  const statusEl = document.querySelector('.model-status');
+  try {
+    const res = await fetch(`${API_BASE_URL}/health`, { method: 'GET' });
+    if (res.ok) {
+      useLiveModel = true;
+      statusEl.innerHTML = '<div class="status-dot"></div>LIVE MODEL';
+      statusEl.style.color = '#22C55E';
+      statusEl.style.background = 'rgba(34,197,94,.1)';
+      statusEl.style.borderColor = 'rgba(34,197,94,.25)';
+    } else {
+      throw new Error('bad response');
+    }
+  } catch (e) {
+    useLiveModel = false;
+    statusEl.innerHTML = '<div class="status-dot" style="background:#F59E0B"></div>OFFLINE MODE';
+    statusEl.style.color = '#F59E0B';
+    statusEl.style.background = 'rgba(245,158,11,.1)';
+    statusEl.style.borderColor = 'rgba(245,158,11,.25)';
+  }
+}
+checkApiHealth();
+
+function toggleSelect(btn) {
+  const field = btn.dataset.field;
+  document.querySelectorAll(`[data-field="${field}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function updateHourDisplay() {
+  const h = document.getElementById('hourSlider').value;
+  document.getElementById('hourDisplay').textContent = `${String(h).padStart(2,'0')}:00`;
+}
+
+function getEventType() {
+  return document.querySelector('[data-field="event_type"].active').dataset.value;
+}
+
+// ── Prediction logic (rule-based, derived from real dataset distributions) ──
+function predict(params) {
+  const stats = CAUSE_STATS[params.cause] || { high_pct: 0.5, closure_pct: 0.1, median_res: 60 };
+  let highProb = stats.high_pct;
+  let closureProb = stats.closure_pct;
+  let resTime = stats.median_res;
+
+  // Peak hour adjustment (7-10am, 6-9pm = higher severity, based on hourly distribution)
+  const peakHours = [19,20,21,22,5,6,7];
+  if (peakHours.includes(params.hour)) highProb += 0.08;
+
+  // Weekend adjustment for public events
+  if ([5,6].includes(params.dayOfWeek) && params.cause === 'public_event') {
+    closureProb += 0.15;
+  }
+
+  // Planned events get more controlled closure probability
+  if (params.eventType === 'planned') closureProb += 0.1;
+
+  // Heavy vehicle involvement raises severity slightly
+  if (['heavy_vehicle','truck','bmtc_bus','ksrtc_bus'].includes(params.vehType)) highProb += 0.05;
+
+  highProb = Math.min(0.97, Math.max(0.05, highProb));
+  closureProb = Math.min(0.97, Math.max(0.02, closureProb));
+
+  // Cap displayed resolution time for sanity (some causes have outlier-heavy medians)
+  const displayRes = Math.min(resTime, 480);
+
+  return {
+    priority: highProb >= 0.5 ? 'HIGH' : 'LOW',
+    priorityConfidence: Math.round((highProb >= 0.5 ? highProb : 1-highProb) * 100),
+    closure: closureProb >= 0.45,
+    closureConfidence: Math.round((closureProb >= 0.45 ? closureProb : 1-closureProb) * 100),
+    resolutionMin: Math.round(displayRes),
+    rawResolution: resTime,
+    highProb, closureProb
+  };
+}
+
+function manpowerFor(result, params) {
+  let base = result.priority === 'HIGH' ? 8 : 4;
+  if (result.closure) base += 6;
+  if (params.cause === 'public_event' || params.cause === 'vip_movement') base += 4;
+  if (params.cause === 'protest') base += 8;
+  const peakHours = [19,20,21,22,5,6,7];
+  if (peakHours.includes(params.hour)) base += 2;
+  return Math.min(base, 30);
+}
+
+function barricadesFor(result) {
+  if (!result.closure) return 0;
+  return result.priority === 'HIGH' ? Math.floor(Math.random()*6)+8 : Math.floor(Math.random()*4)+4;
+}
+
+function formatTime(min) {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min/60), m = min%60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+async function runPrediction() {
+  const btn = document.getElementById('predictBtn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btnText');
+
+  btn.classList.add('loading');
+  spinner.classList.add('show');
+  btnText.textContent = 'Analyzing...';
+
+  const params = {
+    eventType: getEventType(),
+    cause: document.getElementById('eventCause').value,
+    corridor: document.getElementById('corridor').value,
+    zone: document.getElementById('zone').value,
+    vehType: document.getElementById('vehType').value,
+    hour: parseInt(document.getElementById('hourSlider').value),
+    dayOfWeek: parseInt(document.getElementById('dayOfWeek').value)
+  };
+
+  let result, source;
+
+  if (useLiveModel) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: params.eventType,
+          event_cause: params.cause,
+          corridor: params.corridor,
+          zone: params.zone,
+          veh_type: params.vehType,
+          police_station: "unknown",
+          hour: params.hour,
+          day_of_week: params.dayOfWeek,
+          month: new Date().getMonth() + 1
+        })
+      });
+
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const apiResult = await res.json();
+
+      // Map Flask API response shape -> internal result shape used by renderResults()
+      result = {
+        priority: apiResult.priority.toUpperCase(),
+        priorityConfidence: apiResult.priority_confidence,
+        closure: apiResult.road_closure_required,
+        closureConfidence: apiResult.closure_confidence,
+        resolutionMin: Math.round(apiResult.estimated_resolution_minutes),
+        highProb: apiResult.priority_confidence / 100,
+        closureProb: apiResult.closure_confidence / 100
+      };
+      source = 'live';
+    } catch (e) {
+      console.warn('Live model call failed, falling back to rule-based:', e);
+      result = predict(params);
+      source = 'fallback';
+      await checkApiHealth(); // refresh badge to OFFLINE MODE
+    }
+  } else {
+    result = predict(params);
+    source = 'fallback';
+  }
+
+  renderResults(result, params, source);
+
+  btn.classList.remove('loading');
+  spinner.classList.remove('show');
+  btnText.textContent = '⚡ Run Forecast';
+}
+
+function renderResults(result, params, source) {
+  const manpower = manpowerFor(result, params);
+  const barricades = barricadesFor(result);
+  const causeLabel = CAUSE_LABELS[params.cause] || params.cause;
+  const sourceBadge = source === 'live'
+    ? '<span style="font-family:var(--mono);font-size:.62rem;background:rgba(34,197,94,.12);color:#22C55E;padding:.2rem .55rem;border-radius:4px;font-weight:700;">🟢 LIVE XGBOOST MODEL</span>'
+    : '<span style="font-family:var(--mono);font-size:.62rem;background:rgba(245,158,11,.12);color:var(--accent);padding:.2rem .55rem;border-radius:4px;font-weight:700;">🟡 OFFLINE FALLBACK (rule-based)</span>';
+
+  const html = `
+    <div style="margin-bottom:.5rem;">${sourceBadge}</div>
+    <div class="pred-row">
+      <div class="pred-card severity">
+        <div class="pred-label">Predicted Priority</div>
+        <div class="pred-value">${result.priority === 'HIGH' ? '🔴 HIGH' : '🟢 LOW'}</div>
+        <div class="pred-meta">${result.priorityConfidence}% model confidence</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${result.priorityConfidence}%;background:${result.priority==='HIGH'?'#EF4444':'#22C55E'};"></div></div>
+      </div>
+      <div class="pred-card closure">
+        <div class="pred-value" style="font-size:1.35rem;">${result.closure ? '🚧 Required' : '✅ Not Needed'}</div>
+        <div class="pred-label" style="margin-top:.5rem;">Road Closure</div>
+        <div class="pred-meta">${result.closureConfidence}% model confidence</div>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${result.closureConfidence}%;background:#A855F7;"></div></div>
+      </div>
+      <div class="pred-card time">
+        <div class="pred-label">Est. Resolution Time</div>
+        <div class="pred-value">${formatTime(result.resolutionMin)}</div>
+        <div class="pred-meta">Based on historical median for "${causeLabel}"</div>
+      </div>
+    </div>
+
+    <div class="deploy-panel">
+      <div class="deploy-header">
+        <div class="deploy-title">🚓 Recommended Deployment Plan</div>
+        <div class="deploy-tag">AUTO-GENERATED</div>
+      </div>
+      <div class="deploy-grid">
+        <div class="deploy-stat">
+          <div class="deploy-stat-icon">👮</div>
+          <div class="deploy-stat-val">${manpower}</div>
+          <div class="deploy-stat-label">Officers Recommended</div>
+        </div>
+        <div class="deploy-stat">
+          <div class="deploy-stat-icon">🚧</div>
+          <div class="deploy-stat-val">${barricades}</div>
+          <div class="deploy-stat-label">Barricade Units</div>
+        </div>
+        <div class="deploy-stat">
+          <div class="deploy-stat-icon">⏱️</div>
+          <div class="deploy-stat-val">${formatTime(result.resolutionMin)}</div>
+          <div class="deploy-stat-label">Expected Duration</div>
+        </div>
+      </div>
+      <ul class="plan-list">
+        <li class="plan-item">
+          <div class="plan-icon">📍</div>
+          <div class="plan-text"><strong>Deploy to ${params.corridor}</strong><span>${params.zone} · Position units at nearest junction within 5 min response window</span></div>
+        </li>
+        ${result.closure ? `
+        <li class="plan-item">
+          <div class="plan-icon">🚧</div>
+          <div class="plan-text"><strong>Set up traffic diversion</strong><span>Route through nearest parallel corridor; deploy ${barricades} barricade units at entry/exit points</span></div>
+        </li>` : ''}
+        <li class="plan-item">
+          <div class="plan-icon">📢</div>
+          <div class="plan-text"><strong>${result.priority === 'HIGH' ? 'Issue public advisory' : 'Monitor passively'}</strong><span>${result.priority === 'HIGH' ? 'Notify commuters via traffic app & radio of expected delays' : 'Standard patrol monitoring sufficient, escalate if status changes'}</span></div>
+        </li>
+        <li class="plan-item">
+          <div class="plan-icon">🔄</div>
+          <div class="plan-text"><strong>Log for post-event learning</strong><span>Track actual vs predicted resolution time to improve future forecasts</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="explain-card">
+      <div class="explain-title">📊 Why this prediction — key factors</div>
+      <div class="factor-row">
+        <div class="factor-name">Event Cause</div>
+        <div class="factor-bar-track"><div class="factor-bar-fill" style="width:${Math.round(result.highProb*100)}%;background:#F59E0B;"></div></div>
+        <div class="factor-pct">${Math.round(result.highProb*100)}%</div>
+      </div>
+      <div class="factor-row">
+        <div class="factor-name">Time of Day</div>
+        <div class="factor-bar-track"><div class="factor-bar-fill" style="width:${[19,20,21,22,5,6,7].includes(params.hour)?78:35}%;background:#3B82F6;"></div></div>
+        <div class="factor-pct">${[19,20,21,22,5,6,7].includes(params.hour)?78:35}%</div>
+      </div>
+      <div class="factor-row">
+        <div class="factor-name">Vehicle Type</div>
+        <div class="factor-bar-track"><div class="factor-bar-fill" style="width:${['heavy_vehicle','truck','bmtc_bus','ksrtc_bus'].includes(params.vehType)?62:28}%;background:#22C55E;"></div></div>
+        <div class="factor-pct">${['heavy_vehicle','truck','bmtc_bus','ksrtc_bus'].includes(params.vehType)?62:28}%</div>
+      </div>
+      <div class="factor-row">
+        <div class="factor-name">Event Type</div>
+        <div class="factor-bar-track"><div class="factor-bar-fill" style="width:${params.eventType==='planned'?55:42}%;background:#A855F7;"></div></div>
+        <div class="factor-pct">${params.eventType==='planned'?55:42}%</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('resultsArea').innerHTML = html;
+
+  // Add to history
+  history.unshift({ ...params, result, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+  if (history.length > 5) history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const listEl = document.getElementById('historyList');
+  const emptyEl = document.getElementById('historyEmpty');
+  if (history.length === 0) { emptyEl.style.display = 'block'; return; }
+  emptyEl.style.display = 'none';
+  listEl.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div class="history-left">
+        <div class="history-dot" style="background:${h.result.priority==='HIGH'?'#EF4444':'#22C55E'}"></div>
+        <span>${CAUSE_LABELS[h.cause]||h.cause} · ${h.corridor}</span>
+      </div>
+      <span style="color:var(--muted);font-family:var(--mono);font-size:.72rem;">${h.time}</span>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>

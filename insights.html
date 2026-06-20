@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Insights · TrafficSense</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0F1A;--surface:#111827;--surface2:#162032;--border:#1F2D3D;
+  --accent:#F59E0B;--accent2:#3B82F6;--green:#22C55E;--red:#EF4444;
+  --purple:#A855F7;--text:#F1F5F9;--muted:#64748B;
+  --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;}
+.sidebar-logo{padding:1.5rem 1.25rem 1.25rem;font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--accent);border-bottom:1px solid var(--border);}
+.sidebar-logo span{color:var(--text);}
+.sidebar-section{padding:1.25rem 1rem .5rem;font-family:var(--mono);font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.sidebar-nav{list-style:none;padding:0 .5rem;}
+.sidebar-nav li a{display:flex;align-items:center;gap:.65rem;padding:.6rem .75rem;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:500;color:var(--muted);transition:background .15s,color .15s;margin-bottom:.15rem;}
+.sidebar-nav li a:hover{background:var(--surface2);color:var(--text);}
+.sidebar-nav li a.active{background:rgba(239,68,68,.1);color:var(--red);}
+.sidebar-nav li a .icon{font-size:1rem;width:20px;text-align:center;}
+.sidebar-bottom{margin-top:auto;padding:1rem;border-top:1px solid var(--border);}
+.sidebar-tag{font-family:var(--mono);font-size:.65rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:.35rem .6rem;border-radius:6px;text-align:center;}
+
+/* MAIN */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{position:sticky;top:0;z-index:40;background:rgba(11,15,26,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.85rem 2rem;display:flex;align-items:center;justify-content:space-between;}
+.topbar-left h1{font-size:1.1rem;font-weight:600;}
+.topbar-left p{font-size:.75rem;color:var(--muted);font-family:var(--mono);}
+.live-badge{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.7rem;color:var(--red);background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);padding:.35rem .75rem;border-radius:6px;}
+
+.content{padding:2rem;}
+.page-head{margin-bottom:2rem;}
+.page-eyebrow{font-family:var(--mono);font-size:.7rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;}
+.page-head h2{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.5rem;}
+.page-head p{color:var(--muted);font-size:.92rem;max-width:680px;line-height:1.6;}
+
+/* Learning loop banner */
+.loop-banner{
+  background:linear-gradient(135deg, rgba(245,158,11,.08), rgba(168,85,247,.06));
+  border:1px solid var(--border);border-radius:14px;padding:1.5rem 1.75rem;margin-bottom:1.75rem;
+  display:flex;align-items:center;gap:2rem;overflow-x:auto;
+}
+.loop-step{display:flex;align-items:center;gap:.75rem;flex-shrink:0;}
+.loop-num{
+  width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.8rem;color:var(--accent);font-weight:700;flex-shrink:0;
+}
+.loop-text strong{display:block;font-size:.82rem;}
+.loop-text span{font-size:.7rem;color:var(--muted);}
+.loop-arrow{color:var(--muted);font-size:1.1rem;flex-shrink:0;}
+
+/* KPI row */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.25rem;position:relative;overflow:hidden;}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi-card.red::after{background:var(--red);}
+.kpi-card.yellow::after{background:var(--accent);}
+.kpi-card.purple::after{background:var(--purple);}
+.kpi-card.green::after{background:var(--green);}
+.kpi-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;}
+.kpi-value{font-family:var(--mono);font-size:1.6rem;font-weight:600;line-height:1;margin-bottom:.3rem;}
+.kpi-card.red .kpi-value{color:var(--red);}
+.kpi-card.yellow .kpi-value{color:var(--accent);}
+.kpi-card.purple .kpi-value{color:var(--purple);}
+.kpi-card.green .kpi-value{color:var(--green);}
+.kpi-sub{font-size:.72rem;color:var(--muted);}
+
+/* Section cards */
+.chart-row{display:grid;gap:1rem;margin-bottom:1rem;}
+.row-2{grid-template-columns:1.3fr 1fr;}
+.row-2b{grid-template-columns:1fr 1fr;}
+
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem 1.5rem;}
+.chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.1rem;}
+.chart-title{font-size:.9rem;font-weight:600;}
+.chart-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem;}
+.chart-tag{font-family:var(--mono);font-size:.62rem;padding:.2rem .5rem;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);white-space:nowrap;}
+
+/* Hotspot list */
+.hotspot-list{display:flex;flex-direction:column;gap:.6rem;}
+.hotspot-item{
+  display:flex;align-items:center;gap:.9rem;padding:.7rem .85rem;background:var(--surface2);
+  border-radius:9px;border:1px solid var(--border);
+}
+.hotspot-rank{
+  font-family:var(--mono);font-size:.75rem;font-weight:700;width:24px;text-align:center;flex-shrink:0;
+}
+.hotspot-rank.top1{color:var(--red);}
+.hotspot-rank.top2{color:var(--accent);}
+.hotspot-rank.top3{color:#FBBF24;}
+.hotspot-info{flex:1;min-width:0;}
+.hotspot-name{font-size:.84rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hotspot-bar-track{background:var(--bg);height:5px;border-radius:3px;margin-top:.35rem;overflow:hidden;}
+.hotspot-bar-fill{height:100%;border-radius:3px;background:var(--red);}
+.hotspot-count{font-family:var(--mono);font-size:.8rem;color:var(--accent);font-weight:600;flex-shrink:0;}
+
+/* Police performance table */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1rem;}
+.table-header{padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.table-header h3{font-size:.9rem;font-weight:600;}
+.table-header p{font-size:.72rem;color:var(--muted);}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+thead th{background:var(--surface2);padding:.65rem 1.5rem;text-align:left;font-size:.68rem;font-family:var(--mono);color:var(--muted);letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+tbody td{padding:.7rem 1.5rem;color:var(--text);}
+.perf-badge{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.7rem;padding:.2rem .55rem;border-radius:5px;font-weight:600;}
+.perf-critical{background:rgba(239,68,68,.15);color:var(--red);}
+.perf-watch{background:rgba(245,158,11,.15);color:var(--accent);}
+.perf-stable{background:rgba(34,197,94,.15);color:var(--green);}
+.mini-bar-track{background:var(--surface2);height:5px;border-radius:3px;width:90px;overflow:hidden;}
+.mini-bar-fill{height:100%;border-radius:3px;}
+
+/* Learning cards */
+.learning-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1rem;}
+.learning-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;position:relative;overflow:hidden;}
+.learning-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.learning-card.lc1::before{background:var(--red);}
+.learning-card.lc2::before{background:var(--accent);}
+.learning-card.lc3::before{background:var(--accent2);}
+.learning-icon{font-size:1.5rem;margin-bottom:.85rem;}
+.learning-card h4{font-size:.92rem;font-weight:600;margin-bottom:.6rem;}
+.learning-card p{font-size:.82rem;color:var(--muted);line-height:1.65;margin-bottom:.85rem;}
+.learning-stat{
+  font-family:var(--mono);font-size:.72rem;color:var(--accent);background:rgba(245,158,11,.08);
+  border:1px solid rgba(245,158,11,.2);padding:.4rem .7rem;border-radius:6px;display:inline-block;
+}
+
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .row-2,.row-2b{grid-template-columns:1fr;}
+  .learning-grid{grid-template-columns:1fr;}
+}
+@media(max-width:800px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .loop-banner{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">Traffic<span>Sense</span></div>
+  <div class="sidebar-section">Main</div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">🏠</span> Home</a></li>
+    <li><a href="dashboard.html"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="map.html"><span class="icon">🗺️</span> Map View</a></li>
+    <li><a href="forecast.html"><span class="icon">⚡</span> Forecast</a></li>
+    <li><a href="insights.html" class="active"><span class="icon">💡</span> Insights</a></li>
+  </ul>
+  <div class="sidebar-bottom">
+    <div class="sidebar-tag">150-day analysis window</div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Post-Event Learning</h1>
+      <p>Hotspots, workload patterns & system insights</p>
+    </div>
+    <div class="live-badge">🔥 5 critical hotspots</div>
+  </div>
+
+  <div class="content">
+    <div class="page-head">
+      <div class="page-eyebrow">Insights Engine</div>
+      <h2>What the data teaches us</h2>
+      <p>Every closed incident feeds back into the system. This page surfaces recurring hotspots, station-level performance, and patterns the forecast model uses to keep improving — closing the loop that's missing in manual deployment today.</p>
+    </div>
+
+    <!-- LEARNING LOOP -->
+    <div class="loop-banner">
+      <div class="loop-step">
+        <div class="loop-num">1</div>
+        <div class="loop-text"><strong>Event Closed</strong><span>Actual resolution logged</span></div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-num">2</div>
+        <div class="loop-text"><strong>Compare vs Predicted</strong><span>Forecast accuracy tracked</span></div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-num">3</div>
+        <div class="loop-text"><strong>Hotspots Identified</strong><span>Recurring junctions flagged</span></div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-num">4</div>
+        <div class="loop-text"><strong>Model Retrained</strong><span>Future forecasts improve</span></div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card red">
+        <div class="kpi-label">Top Hotspot</div>
+        <div class="kpi-value">64</div>
+        <div class="kpi-sub">Incidents at Mekhri Circle</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-label">Avg Resolution</div>
+        <div class="kpi-value">68 min</div>
+        <div class="kpi-sub">Across non-outlier events</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">Critical Stations</div>
+        <div class="kpi-value">4</div>
+        <div class="kpi-sub">Over 85% high-priority rate</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Resolution Rate</div>
+        <div class="kpi-value">86.8%</div>
+        <div class="kpi-sub">7,095 of 8,173 closed</div>
+      </div>
+    </div>
+
+    <!-- HOTSPOTS + CORRIDORS -->
+    <div class="chart-row row-2">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">🔥 Top Junction Hotspots</div>
+            <div class="chart-sub">Junctions with highest recurring incident count</div>
+          </div>
+          <div class="chart-tag">TOP 10</div>
+        </div>
+        <div class="hotspot-list" id="junctionList"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Busiest Corridors</div>
+            <div class="chart-sub">Excluding non-corridor roads</div>
+          </div>
+          <div class="chart-tag">TOP 8</div>
+        </div>
+        <div class="chart-wrap"><canvas id="corridorChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- CAUSE x PRIORITY HEATMAP-STYLE + ZONE RESOLUTION -->
+    <div class="chart-row row-2b">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Cause → Priority Breakdown</div>
+            <div class="chart-sub">High vs Low priority split per cause</div>
+          </div>
+          <div class="chart-tag">STACKED</div>
+        </div>
+        <div class="chart-wrap"><canvas id="causePriorityChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Median Resolution by Zone</div>
+            <div class="chart-sub">Minutes to close (excluding outliers)</div>
+          </div>
+          <div class="chart-tag">ZONE</div>
+        </div>
+        <div class="chart-wrap"><canvas id="zoneResChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- POLICE STATION PERFORMANCE TABLE -->
+    <div class="table-card">
+      <div class="table-header">
+        <div>
+          <h3>Police Station Performance</h3>
+          <p>Workload, high-priority rate, and median resolution time — used to flag stations needing extra support</p>
+        </div>
+        <div class="chart-tag">TOP 10 BY VOLUME</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Station</th>
+            <th>Total Events</th>
+            <th>High Priority %</th>
+            <th>Median Resolution</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="policeTable"></tbody>
+      </table>
+    </div>
+
+    <!-- LEARNING CARDS -->
+    <div class="learning-grid">
+      <div class="learning-card lc1">
+        <div class="learning-icon">🚌</div>
+        <h4>BMTC buses are the #1 breakdown source</h4>
+        <p>Among all vehicle breakdowns, BMTC buses account for the largest share — more than double the next category. Targeted fleet maintenance could meaningfully cut breakdown-driven congestion.</p>
+        <div class="learning-stat">1,466 of 4,896 breakdown events</div>
+      </div>
+      <div class="learning-card lc2">
+        <div class="learning-icon">🕘</div>
+        <h4>Evenings drive the most incidents</h4>
+        <p>21:00 is the single busiest hour for traffic events, with the 19:00–22:00 window accounting for a disproportionate share of all incidents — likely tied to evening commute volume.</p>
+        <div class="learning-stat">810 events logged at 21:00 alone</div>
+      </div>
+      <div class="learning-card lc3">
+        <div class="learning-icon">🏚️</div>
+        <h4>Potholes have the longest tail</h4>
+        <p>While potholes are rarely "high severity" individually, their median time-to-resolution massively outpaces every other cause — pointing to a maintenance backlog rather than an emergency response gap.</p>
+        <div class="learning-stat">Median 12,990 min to close (~9 days)</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const C = { yellow:'#F59E0B', blue:'#3B82F6', red:'#EF4444', green:'#22C55E', purple:'#A855F7', muted:'#64748B', border:'#1F2D3D', text:'#F1F5F9' };
+Chart.defaults.color = C.muted;
+Chart.defaults.borderColor = C.border;
+Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+
+// ── DATA ──
+const JUNCTIONS = {"MekhriCircle":64,"AyyappaTempleJunc":49,"SatteliteBusStandJunc":43,"YeshwanthpuraCircle":38,"YelhankaCircle":34,"SilkBoardJunc":33,"toll gate mysore road":33,"JalahalliCross(SM Circle)":32,"Nagavara-ORR Junction":32,"K R Circle":31};
+
+const CORRIDORS = {"Mysore Road":743,"Bellary Road 1":610,"Tumkur Road":458,"Bellary Road 2":379,"Hosur Road":298,"ORR North 1":275,"Old Madras Road":263,"Magadi Road":245};
+
+const CAUSE_PRIORITY = {
+  vehicle_breakdown:{High:3241,Low:1653}, others:{High:380,Low:258}, pot_holes:{High:299,Low:238},
+  construction:{High:302,Low:178}, water_logging:{High:271,Low:187}, accident:{High:168,Low:197},
+  tree_fall:{High:93,Low:191}, road_conditions:{High:93,Low:77}
+};
+
+const ZONE_RES = {"Central Zone 1":57.1,"Central Zone 2":51.4,"East Zone 1":56.0,"East Zone 2":86.2,"North Zone 1":80.6,"North Zone 2":61.2,"South Zone 1":113.6,"South Zone 2":81.6,"West Zone 1":53.7,"West Zone 2":52.8};
+
+const POLICE = {
+  "Yelahanka":{total:377,high_pct:76.1,median_res:76},
+  "HAL Old Airport":{total:361,high_pct:89.5,median_res:82},
+  "Sadashivanagar":{total:302,high_pct:77.8,median_res:53},
+  "Byatarayanapura":{total:297,high_pct:92.3,median_res:49},
+  "Halasuru Gate":{total:297,high_pct:72.1,median_res:47},
+  "Yeshwanthpura":{total:280,high_pct:90.7,median_res:46},
+  "Hennuru":{total:276,high_pct:72.8,median_res:477},
+  "Kodigehalli":{total:272,high_pct:87.1,median_res:111},
+  "Banaswadi":{total:245,high_pct:79.6,median_res:54},
+  "K.R. Pura":{total:228,high_pct:7.0,median_res:68}
+};
+
+// ── JUNCTION HOTSPOT LIST ──
+(function(){
+  const list = document.getElementById('junctionList');
+  const max = Math.max(...Object.values(JUNCTIONS));
+  Object.entries(JUNCTIONS).forEach(([name, count], i) => {
+    const rankClass = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    const barColor = i<3 ? '#EF4444' : i<6 ? '#F59E0B' : '#3B82F6';
+    list.innerHTML += `
+      <div class="hotspot-item">
+        <div class="hotspot-rank ${rankClass}">${String(i+1).padStart(2,'0')}</div>
+        <div class="hotspot-info">
+          <div class="hotspot-name">${name}</div>
+          <div class="hotspot-bar-track"><div class="hotspot-bar-fill" style="width:${(count/max)*100}%;background:${barColor};"></div></div>
+        </div>
+        <div class="hotspot-count">${count}</div>
+      </div>`;
+  });
+})();
+
+// ── CORRIDOR CHART ──
+(function(){
+  const ctx = document.getElementById('corridorChart').getContext('2d');
+  new Chart(ctx, {
+    type:'bar',
+    data:{ labels:Object.keys(CORRIDORS), datasets:[{ data:Object.values(CORRIDORS), backgroundColor:'#3B82F6', borderRadius:4, borderSkipped:false }]},
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#0B0F1A', borderColor:C.border, borderWidth:1, callbacks:{ label: ctx=>` ${ctx.parsed.x.toLocaleString()} events` }}},
+      scales:{ x:{ grid:{color:C.border}, ticks:{font:{size:10}} }, y:{ grid:{display:false}, ticks:{font:{size:10}} } }
+    }
+  });
+})();
+
+// ── CAUSE PRIORITY STACKED ──
+(function(){
+  const ctx = document.getElementById('causePriorityChart').getContext('2d');
+  const labels = Object.keys(CAUSE_PRIORITY).map(l=>l.replace(/_/g,' '));
+  new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { label:'High', data:Object.values(CAUSE_PRIORITY).map(v=>v.High), backgroundColor:'#EF4444', borderRadius:3, borderSkipped:false },
+        { label:'Low', data:Object.values(CAUSE_PRIORITY).map(v=>v.Low), backgroundColor:'#22C55E', borderRadius:3, borderSkipped:false }
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ display:true, position:'top', labels:{font:{size:10}, boxWidth:10} }, tooltip:{ backgroundColor:'#0B0F1A', borderColor:C.border, borderWidth:1 }},
+      scales:{ x:{ stacked:true, grid:{display:false}, ticks:{font:{size:9}, maxRotation:45} }, y:{ stacked:true, grid:{color:C.border}, ticks:{font:{size:10}} } }
+    }
+  });
+})();
+
+// ── ZONE RESOLUTION CHART ──
+(function(){
+  const ctx = document.getElementById('zoneResChart').getContext('2d');
+  const sorted = Object.entries(ZONE_RES).sort((a,b)=>a[1]-b[1]);
+  new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: sorted.map(d=>d[0]),
+      datasets:[{ data: sorted.map(d=>d[1]), backgroundColor: sorted.map(d=> d[1]>90?'#EF4444':d[1]>65?'#F59E0B':'#22C55E'), borderRadius:4, borderSkipped:false }]
+    },
+    options:{
+      responsive:true,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#0B0F1A', borderColor:C.border, borderWidth:1, callbacks:{ label: ctx=>` ${ctx.parsed.y} min median` }}},
+      scales:{ x:{ grid:{display:false}, ticks:{font:{size:9}, maxRotation:45} }, y:{ grid:{color:C.border}, ticks:{font:{size:10}, callback:v=>v+'m'} } }
+    }
+  });
+})();
+
+// ── POLICE TABLE ──
+(function(){
+  const tbody = document.getElementById('policeTable');
+  Object.entries(POLICE).forEach(([name, d]) => {
+    let status, badgeClass, barColor;
+    if (d.high_pct >= 85) { status = '🔴 Critical'; badgeClass = 'perf-critical'; barColor='#EF4444'; }
+    else if (d.high_pct >= 70) { status = '🟡 Watch'; badgeClass = 'perf-watch'; barColor='#F59E0B'; }
+    else { status = '🟢 Stable'; badgeClass = 'perf-stable'; barColor='#22C55E'; }
+
+    tbody.innerHTML += `
+      <tr>
+        <td style="font-weight:500;">${name}</td>
+        <td style="font-family:var(--mono);color:var(--accent);">${d.total.toLocaleString()}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:.5rem;">
+            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${d.high_pct}%;background:${barColor};"></div></div>
+            <span style="font-family:var(--mono);font-size:.75rem;">${d.high_pct}%</span>
+          </div>
+        </td>
+        <td style="font-family:var(--mono);color:var(--muted);">${d.median_res >= 100 ? (d.median_res/60).toFixed(1)+'h' : d.median_res+'m'}</td>
+        <td><span class="perf-badge ${badgeClass}">${status}</span></td>
+      </tr>`;
+  });
+})();
+</script>
+</body>
+</html>
