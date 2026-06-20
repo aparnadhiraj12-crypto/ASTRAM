@@ -1,0 +1,26 @@
+{
+  "categorical": [
+    "event_type",
+    "event_cause",
+    "zone",
+    "veh_type"
+  ],
+  "numeric": [
+    "hour",
+    "day_of_week",
+    "month",
+    "is_weekend",
+    "is_peak_hour"
+  ],
+  "all": [
+    "event_type",
+    "event_cause",
+    "zone",
+    "veh_type",
+    "hour",
+    "day_of_week",
+    "month",
+    "is_weekend",
+    "is_peak_hour"
+  ]
+}
