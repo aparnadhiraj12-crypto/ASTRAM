@@ -384,9 +384,10 @@ const CAUSE_LABELS = {
 let history = [];
 
 // ── Live model API configuration ──
-// This points at your Flask server running in Codespaces (app.py).
-// Update this if your Codespace URL changes (e.g. after a restart).
-const API_BASE_URL = "https://curly-space-goggles-7v4vqpwrw6xgcp4qj-5000.app.github.dev";
+// This points at your Flask server deployed on Railway (app.py).
+// Railway stays online permanently (unlike Codespaces, which sleeps),
+// so this URL should remain stable for demos.
+const API_BASE_URL = "https://astram-production.up.railway.app";
 let useLiveModel = true; // set to false to force the offline rule-based fallback
 
 async function checkApiHealth() {
